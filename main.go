@@ -129,6 +129,9 @@ func putToDo(r *http.Request) (*toDo, error) {
 	return &toDoList.items[index], nil
 }
 
+// Identical to putToDo, but may modify it later.
+// Patch updates record columns; Put replaces records completely, in theory.
+// Therefore, it might be good to modify this to do the same.
 func patchToDo(r *http.Request) (*toDo, error) {
 	toDoPt, err := extractToDoBody(r)
 	if err != nil {
