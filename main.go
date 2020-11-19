@@ -72,15 +72,27 @@ func ToDoHandler(w http.ResponseWriter, r *http.Request) {
 			toDoJson, _ := json.Marshal(*item)
 			w.Write([]byte(toDoJson))
 		}
-	/*
 	case "PATCH":
-		nil
+		item, patchErr := patchToDo(r)
+		if patchErr != nil {
+			handleError(w, patchErr)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			toDoJson, _ := json.Marshal(*item)
+			w.Write([]byte(toDoJson))
+		}
 	case "DELETE":
-		nil
-	*/
+		item, delErr := deleteToDo(r)
+		if delErr != nil {
+			handleError(w, delErr)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			toDoJson, _ := json.Marshal(*item)
+			w.Write([]byte(toDoJson))
+		}
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write("The method is not supported by this resource")
+		w.Write([]byte("The method is not supported by this resource"))
 	}
 }
 
@@ -113,19 +125,39 @@ func putToDo(r *http.Request) (*toDo, error) {
 	if findErr != nil {
 		return toDoItem, findErr
 	}
-	fmt.Println(index)
 	toDoList.items[index] = *toDoPt
 	return &toDoList.items[index], nil
 }
-/*
-func patchToDo(r *http.Request) (*toDo, error) {
 
+func patchToDo(r *http.Request) (*toDo, error) {
+	toDoPt, err := extractToDoBody(r)
+	if err != nil {
+		return toDoPt, err
+	}
+	toDoList.Lock()
+	defer toDoList.Unlock()
+	index, toDoItem, findErr := findItem(toDoPt.Id)
+	if findErr != nil {
+		return toDoItem, findErr
+	}
+	toDoList.items[index] = *toDoPt
+	return &toDoList.items[index], nil
 }
 
 func deleteToDo(r *http.Request) (*toDo, error) {
-
+	toDoPt, err := extractToDoBody(r)
+	if err != nil {
+		return toDoPt, err
+	}
+	toDoList.Lock()
+	defer toDoList.Unlock()
+	index, toDoItem, findErr := findItem(toDoPt.Id)
+	if findErr != nil {
+		return toDoItem, findErr
+	}
+	toDoList.items = append(toDoList.items[:index], toDoList.items[index+1:]...)
+	return toDoItem, nil
 }
-*/
 
 func handleError(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusBadRequest)
