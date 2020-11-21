@@ -26,10 +26,10 @@ type toDoList struct {
 	sync.Mutex
 	items []toDo
 }
-func makeToDoList() {
+func makeToDoList() toDoList {
 	return toDoList{}
 }
-func (l *toDoList) fetchToDoData() {
+func (l *toDoList) fetchData() {
 	l.items = []toDo{
 		toDo{
 			Id: 1,
@@ -71,7 +71,7 @@ func (l *toDoList) findItem(id int) (int, *toDo, error) {
 func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		items, getErr := getToDo(r)
+		items, getErr := l.getToDo(r)
 		if getErr != nil {
 			handleError(w, getErr)
 		} else {
@@ -80,7 +80,7 @@ func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(toDoJson))
 		}
 	case "POST":
-		item, postErr := postToDo(r)
+		item, postErr := l.postToDo(r)
 		if postErr != nil {
 			handleError(w, postErr)
 		} else {
@@ -89,7 +89,7 @@ func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(toDoJson))
 		}
 	case "PUT":
-		item, putErr := putToDo(r)
+		item, putErr := l.putToDo(r)
 		if putErr != nil {
 			handleError(w, putErr)
 		} else {
@@ -98,7 +98,7 @@ func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(toDoJson))
 		}
 	case "PATCH":
-		item, patchErr := patchToDo(r)
+		item, patchErr := l.patchToDo(r)
 		if patchErr != nil {
 			handleError(w, patchErr)
 		} else {
@@ -107,7 +107,7 @@ func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(toDoJson))
 		}
 	case "DELETE":
-		item, delErr := deleteToDo(r)
+		item, delErr := l.deleteToDo(r)
 		if delErr != nil {
 			handleError(w, delErr)
 		} else {
@@ -121,69 +121,69 @@ func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getToDo(r *http.Request) (*[]toDo, error) {
-	toDoList.Lock()
-	defer toDoList.Unlock()
+func (l *toDoList) getToDo(r *http.Request) (*[]toDo, error) {
+	l.Lock()
+	defer l.Unlock()
 
-	return &toDoList.items, nil
+	return &l.items, nil
 }
 
-func postToDo(r *http.Request) (*toDo, error) {
+func (l *toDoList) postToDo(r *http.Request) (*toDo, error) {
 	toDoPt, err := extractToDoBody(r)
 	if err != nil {
 		return toDoPt, err
 	}
-	toDoList.Lock()
-	defer toDoList.Unlock()
-	toDoList.items = append(toDoList.items, *toDoPt)
-	return &toDoList.items[len(toDoList.items) - 1], nil
+	l.Lock()
+	defer l.Unlock()
+	l.items = append(l.items, *toDoPt)
+	return &l.items[len(l.items) - 1], nil
 }
 
-func putToDo(r *http.Request) (*toDo, error) {
+func (l *toDoList) putToDo(r *http.Request) (*toDo, error) {
 	toDoPt, err := extractToDoBody(r)
 	if err != nil {
 		return toDoPt, err
 	}
-	toDoList.Lock()
-	defer toDoList.Unlock()
+	l.Lock()
+	defer l.Unlock()
 	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
-	toDoList.items[index] = *toDoPt
-	return &toDoList.items[index], nil
+	l.items[index] = *toDoPt
+	return &l.items[index], nil
 }
 
 // Identical to putToDo, but may modify it later.
 // Patch updates record columns; Put replaces records completely, in theory.
 // Therefore, it might be good to modify this to do the same.
-func patchToDo(r *http.Request) (*toDo, error) {
+func (l *toDoList) patchToDo(r *http.Request) (*toDo, error) {
 	toDoPt, err := extractToDoBody(r)
 	if err != nil {
 		return toDoPt, err
 	}
-	toDoList.Lock()
-	defer toDoList.Unlock()
+	l.Lock()
+	defer l.Unlock()
 	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
-	toDoList.items[index] = *toDoPt
-	return &toDoList.items[index], nil
+	l.items[index] = *toDoPt
+	return &l.items[index], nil
 }
 
-func deleteToDo(r *http.Request) (*toDo, error) {
+func (l *toDoList) deleteToDo(r *http.Request) (*toDo, error) {
 	toDoPt, err := extractToDoBody(r)
 	if err != nil {
 		return toDoPt, err
 	}
-	toDoList.Lock()
-	defer toDoList.Unlock()
+	l.Lock()
+	defer l.Unlock()
 	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
-	toDoList.items = append(toDoList.items[:index], toDoList.items[index+1:]...)
+	l.items = append(l.items[:index], l.items[index+1:]...)
 	return toDoItem, nil
 }
 
@@ -207,7 +207,7 @@ func extractToDoBody(r *http.Request) (*toDo, error) {
 	return &newToDo, nil
 }
 
-func handleRequests() {
+func handleRequests(l toDoList) {
 	fmt.Println("Request handler initialized. ctrl+c to exit")
 	http.HandleFunc("/api/todo/", l.ToDoHandler)
 	err := http.ListenAndServe(":10000", nil)
@@ -218,7 +218,7 @@ func handleRequests() {
 
 func main() {
 	tdl := makeToDoList()
-	tdl.fetchToDoData()
+	tdl.fetchData()
 
-	handleRequests()
+	handleRequests(tdl)
 }
