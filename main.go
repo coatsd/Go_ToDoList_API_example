@@ -22,15 +22,40 @@ func newToDo(id int, title, desc string, isDone bool) *toDo {
 	return &toDo{Id: id, Title: title, Desc: desc, IsDone: isDone,}
 }
 
-var toDoList struct {
+type toDoList struct {
 	sync.Mutex
 	items []toDo
 }
+func makeToDoList() {
+	return toDoList{}
+}
+func (l *toDoList) fetchToDoData() {
+	l.items = []toDo{
+		toDo{
+			Id: 1,
+			Title: "Test 1",
+			Desc: "Description 1",
+			IsDone: false,
+		},
+		toDo{
+			Id: 2,
+			Title: "Test 2",
+			Desc: "Description 2",
+			IsDone: false,
+		},
+		toDo{
+			Id: 3,
+			Title: "Test 3",
+			Desc: "Description 3",
+			IsDone: false,
+		},
+	}
+}
 // returns the index value, a pointer to the toDo item found, and an error
-func findItem(id int) (int, *toDo, error) {
+func (l *toDoList) findItem(id int) (int, *toDo, error) {
 	var toDoPt *toDo
 	index := -1
-	for i, td := range toDoList.items {
+	for i, td := range l.items {
 		if td.Id == id {
 			index = i
 			toDoPt = &td
@@ -43,7 +68,7 @@ func findItem(id int) (int, *toDo, error) {
 	return index, toDoPt, nil
 }
 
-func ToDoHandler(w http.ResponseWriter, r *http.Request) {
+func (l *toDoList) ToDoHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		items, getErr := getToDo(r)
@@ -121,7 +146,7 @@ func putToDo(r *http.Request) (*toDo, error) {
 	}
 	toDoList.Lock()
 	defer toDoList.Unlock()
-	index, toDoItem, findErr := findItem(toDoPt.Id)
+	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
@@ -139,7 +164,7 @@ func patchToDo(r *http.Request) (*toDo, error) {
 	}
 	toDoList.Lock()
 	defer toDoList.Unlock()
-	index, toDoItem, findErr := findItem(toDoPt.Id)
+	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
@@ -154,7 +179,7 @@ func deleteToDo(r *http.Request) (*toDo, error) {
 	}
 	toDoList.Lock()
 	defer toDoList.Unlock()
-	index, toDoItem, findErr := findItem(toDoPt.Id)
+	index, toDoItem, findErr := l.findItem(toDoPt.Id)
 	if findErr != nil {
 		return toDoItem, findErr
 	}
@@ -184,7 +209,7 @@ func extractToDoBody(r *http.Request) (*toDo, error) {
 
 func handleRequests() {
 	fmt.Println("Request handler initialized. ctrl+c to exit")
-	http.HandleFunc("/api/todo/", ToDoHandler)
+	http.HandleFunc("/api/todo/", l.ToDoHandler)
 	err := http.ListenAndServe(":10000", nil)
 	if err != nil {
 		panic(err)
@@ -192,26 +217,8 @@ func handleRequests() {
 }
 
 func main() {
-	toDoList.items = []toDo{
-		toDo{
-			Id: 1,
-			Title: "Test 1",
-			Desc: "Description 1",
-			IsDone: false,
-		},
-		toDo{
-			Id: 2,
-			Title: "Test 2",
-			Desc: "Description 2",
-			IsDone: false,
-		},
-		toDo{
-			Id: 3,
-			Title: "Test 3",
-			Desc: "Description 3",
-			IsDone: false,
-		},
-	}
+	tdl := makeToDoList()
+	tdl.fetchToDoData()
 
 	handleRequests()
 }
